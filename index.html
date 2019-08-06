@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Container</title>
+    <script src="http://assets.meld.cx/agent/1.0.31/Agent.js"></script>
+    <style>
+        html, body {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .content {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <h1>MeldCX AgentM Example Container App</h1>
+        <span id="buttons"></span>
+    </div>
+    <script>
+        const agent = window.Agent;
+
+        // The list of apps with default layout
+        const apps = [
+            {
+                title: 'App #1',
+                name: 'app1',
+                index: 'app1/app1.html',
+                config: {
+                    top: '10vh',
+                    left: '1vw',
+                    width: '48vw',
+                    height: '85vh'
+                }
+
+            },
+            {
+                title: 'App #2',
+                name: 'app2',
+                index: 'app2/app2.html',
+                config: {
+                    top: '10vh',
+                    left: '51vw',
+                    width: '48vw',
+                    height: '85vh'
+                }
+            }
+        ];
+
+        const buttons = document.getElementById('buttons');
+        let activeApp = null;
+
+        const start = async () => {
+            // Wait for the Agent library to initialise
+            await agent.onReadyAsync();
+
+            // Get the WebviewManager instance
+            const displayId = agent._acw.displayId;
+            const windowId = `Window-${displayId}`;
+            const WebviewManager = agent.Webview.Manager[windowId];
+
+            // Remove all the previously created webviews
+            const views = await WebviewManager.getWebviews();
+            const appViews = views.filter(w => apps.find(a => a.name === w.name));
+            for  (const appView of appViews) {
+                await WebviewManager.kill(appView.id);
+            }
+
+            // Create webviews for our Apps
+            for  (const app of apps) {
+                app.id = await WebviewManager.create(Object.assign({
+                    url:`${location.origin}/apps/${app.index}`,
+                    name: app.name,
+                    revealafterload: true,
+                    zindex: 11
+                }, app.config));
+            }
+
+            // Initialise command bar actions
+            const setButtons = () => {
+                if (activeApp) {
+                    buttons.innerHTML =
+                        `<button onclick="restoreView('${activeApp}')">Show All Apps</button>`;
+                } else {
+                    buttons.innerHTML = apps.map(
+                        a => `<button onclick="maximiseView('${a.id}')">Maximise ${a.title}</button>`).join('');
+                }
+            };
+
+            // Maximise one of the Apps
+            window.maximiseView = async (id) => {
+                await WebviewManager.setWebviewConfiguration(id, {
+                    top: '10vh',
+                    left: '1vw',
+                    width: '98vw',
+                    height: '85vh',
+                    zindex: 12
+                });
+
+                await WebviewManager.draw(id);
+
+                activeApp = id;
+                setButtons();
+            };
+
+            // Restore the default layout of the Apps
+            window.restoreView = async (id) => {
+                await WebviewManager.setWebviewConfiguration(id, Object.assign({
+                    zindex: 11
+                }, apps.find(a => a.id === id).config));
+
+                await WebviewManager.draw(id);
+
+                activeApp = null;
+                setButtons();
+            };
+
+            setButtons();
+        }
+
+        start();
+
+    </script>
+</body>
+</html>

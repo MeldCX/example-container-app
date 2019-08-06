@@ -2,6 +2,8 @@
 
 MeldCX Example Container App - https://docs.meld.cx/Agent.Webview.Manager.WindowManager.html
 
+![Screenshot](screenshot.png?raw=true "Screenshot")
+
 ## Usage
 
 ### MeldCX Packaged App
